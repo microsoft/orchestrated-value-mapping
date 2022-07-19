@@ -1,0 +1,49 @@
+# Minimal parameters for MapDQN agent class.
+import dopamine.discrete_domains.atari_lib
+import map_rl.models
+import map_rl.experiment_runner
+import map_rl.map_dqn_agent
+import map_rl.circular_replay_buffer
+import gin.tf.external_configurables
+
+MapDQNAgent.network = @models.MapDQNNetwork
+# The number of reward channels are determined from the number of mapping functions.
+MapDQNAgent.map_func_id = "[loglin,loglin]"
+# Implemented reward decomposition schemes: {polar,config_1,config_2,two_ensemble_polar}.
+MapDQNAgent.rew_decomp_id = 'polar'
+MapDQNAgent.use_gradscaling = False  # if True, rescales shared grads by 1/sqrt(num_heads)
+MapDQNAgent.use_nonlinear_heads = True  # if True, uses a nonlinear hidden layer in each head
+MapDQNAgent.clip_qt_max = True  # if True, clips TD targets.
+MapDQNAgent.clip_q_chosen = True  # if True, clips chosen Q.
+MapDQNAgent.alpha = 0.00025  # alpha = beta_reg * beta_f
+
+MapDQNAgent.gamma = 0.96
+MapDQNAgent.update_horizon = 1
+MapDQNAgent.min_replay_history = 20000  # agent steps
+MapDQNAgent.update_period = 4
+MapDQNAgent.target_update_period = 8000  # agent steps
+MapDQNAgent.epsilon_train = 0.01
+MapDQNAgent.epsilon_eval = 0.001
+MapDQNAgent.epsilon_decay_period = 250000  # agent steps
+MapDQNAgent.tf_device = '/gpu:0'  # use '/cpu:*' for non-GPU version
+MapDQNAgent.optimizer = @tf.train.RMSPropOptimizer()
+
+tf.train.RMSPropOptimizer.learning_rate = 0.0025  # beta_f
+tf.train.RMSPropOptimizer.decay = 0.95
+tf.train.RMSPropOptimizer.momentum = 0.0
+tf.train.RMSPropOptimizer.epsilon = 0.00001
+tf.train.RMSPropOptimizer.centered = True
+
+atari_lib.create_atari_environment.game_name = 'Pong'
+# Sticky actions with probability 0.25, as suggested by (Machado et al., 2017).
+atari_lib.create_atari_environment.sticky_actions = True
+experiment_runner.create_agent.agent_name = 'map_dqn'
+# Rewards are internally clipped according to the reward decomposition scheme.
+Runner.clip_rewards = False
+Runner.num_iterations = 200
+Runner.training_steps = 250000  # agent steps
+Runner.evaluation_steps = 125000  # agent steps
+Runner.max_steps_per_episode = 27000  # agent steps
+
+WrappedTypedReplayBuffer.replay_capacity = 1000000
+WrappedTypedReplayBuffer.batch_size = 32

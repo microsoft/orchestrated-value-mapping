@@ -1,33 +1,124 @@
-# Project
+# **Orchestrated Value Mapping**
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+This repository hosts the code release for the paper ["Orchestrated Value Mapping for Reinforcement Learning"](https://arxiv.org/abs/2203.07171), published at [ICLR 2022][map_rl]. This work was done by [Mehdi Fatemi](https://www.microsoft.com/en-us/research/people/mefatemi) (Microsoft Research) and [Arash Tavakoli](https://atavakol.github.io) (Max Planck Institute for Intelligent Systems).
 
-As the maintainer of this project, please make a few updates:
+We release a flexible framework, built upon Dopamine ([Castro et al., 2018][dopamine_paper]), for building and orchestrating various mappings over different reward decomposition schemes. This enables the research community to easily explore the design space that our theory opens up and investigate new convergent families of algorithms.
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+The code has been developed by [Arash Tavakoli](https://github.com/atavakol).
 
-## Contributing
+## [LICENSE](https://github.com/microsoft/orchestrated-value-mapping/blob/master/LICENSE)
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+## [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct)
+ 
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+## Citing
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+If you make use of our work, please use the citation information below:
 
-## Trademarks
+```
+@inproceedings{Fatemi2022Orchestrated,
+  title={Orchestrated Value Mapping for Reinforcement Learning},
+  author={Mehdi Fatemi and Arash Tavakoli},
+  booktitle={International Conference on Learning Representations},
+  year={2022},
+  url={https://openreview.net/forum?id=c87d0TS4yX}
+}
+```
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+# Getting started
+
+We install the required packages within a virtual environment. 
+
+
+## Virtual environment
+
+Create a virtual environment using `conda` via: 
+
+```
+conda create --name maprl-env python=3.8
+conda activate maprl-env
+```
+
+
+## Prerequisites
+
+**Atari benchmark.** 
+To set up the Atari suite, please follow the steps outlined [here](https://github.com/google/dopamine/blob/master/README.md#prerequisites).    
+
+**Install Dopamine.** Install a compatible version of [Dopamine][dopamine_repo] with `pip`:
+```
+pip install dopamine-rl==3.1.10
+```
+
+
+## Installing from source
+
+To easily experiment within our framework, install it from source and modify the code directly:
+
+```
+git clone https://github.com/microsoft/orchestrated-value-mapping.git
+cd orchestrated-value-mapping
+pip install -e .
+```
+
+
+## Training an agent
+
+Change directory to the workspace directory:
+```
+cd map_rl
+```
+
+To train a **LogDQN** agent, similar to that introduced by [van Seijen, Fatemi & Tavakoli (2019)][log_rl], run the following command:
+```
+python -um map_rl.train \
+  --base_dir=/tmp/log_dqn \
+  --gin_files='configs/map_dqn.gin' \
+  --gin_bindings='MapDQNAgent.map_func_id="[log,log]"' \
+  --gin_bindings='MapDQNAgent.rew_decomp_id="polar"' &
+```
+Here, `polar` refers to the reward decomposition scheme described in Equation 13 of [Fatemi & Tavakoli (2022)][map_rl] (which has two reward channels) and `[log,log]` results in a logarithmic mapping for each of the two reward channels. 
+
+Train a **LogLinDQN** agent, similar to that described by [Fatemi & Tavakoli (2022)][map_rl], using:
+```
+python -um map_rl.train \
+  --base_dir=/tmp/loglin_dqn \
+  --gin_files='configs/map_dqn.gin' \
+  --gin_bindings='MapDQNAgent.map_func_id="[loglin,loglin]"' \
+  --gin_bindings='MapDQNAgent.rew_decomp_id="polar"' &
+```
+
+
+## Creating custom agents
+
+To instantiate a custom agent, simply set the mapping functions for each channel and a reward decomposition scheme. For instance, the following setting
+```
+MapDQNAgent.map_func_id="[log,identity]"
+MapDQNAgent.rew_decomp_id="polar"
+```
+results in a logarithmic mapping for the positive-reward channel and the identity mapping (same as in [DQN][dqn]) for the negative-reward channel. 
+
+To use more complex reward decomposition schemes, such as Configurations 1 and 2 from [Fatemi & Tavakoli (2022)][map_rl], you can do as follows:
+```
+MapDQNAgent.map_func_id="[identity,identity,log,log,loglin,loglin]"
+MapDQNAgent.rew_decomp_id="config_1"
+```
+
+To instantiate an ensemble of two learners, each using a `polar` reward decomposition, use the following syntax:
+```
+MapDQNAgent.map_func_id="[loglin,loglin,log,log]"
+MapDQNAgent.rew_decomp_id="two_ensemble_polar"
+```
+
+
+## Custom mappings and reward decomposition schemes
+
+To implement custom mapping functions and reward decomposition schemes, we suggest that you draw on insights from [Fatemi & Tavakoli (2022)][map_rl] and follow the format of such methods in [map_dqn_agent.py](https://github.com/microsoft/orchestrated-value-mapping/map_rl/map_dqn_agent.py) to design yours.  
+
+
+
+[map_rl]: https://openreview.net/forum?id=c87d0TS4yX
+[log_rl]: https://arxiv.org/abs/1906.00572
+[dqn]: https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+[dopamine_paper]: https://arxiv.org/abs/1812.06110
+[dopamine_repo]: https://github.com/google/dopamine
